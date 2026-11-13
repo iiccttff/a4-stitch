@@ -7,8 +7,8 @@ from pathlib import Path
 import subprocess
 import sys
 import venv
+from project_paths import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 PYTHON = ROOT / '.venv' / 'Scripts' / 'python.exe'
 
 
