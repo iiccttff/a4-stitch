@@ -1,0 +1,134 @@
+[
+  {
+    "file": "bin\\pdftoppm.exe",
+    "sha256": "c6799b8f3b948c5d4f6b00057595149ec82778c72b6c23183cc818b4f4af1fc6"
+  },
+  {
+    "file": "bin\\api-ms-win-crt-locale-l1-1-0.dll",
+    "sha256": "6c68648e524187e03c4ad9aaa4a99113c6ee9f29fb39cc0ed93f951975138e63"
+  },
+  {
+    "file": "bin\\api-ms-win-crt-math-l1-1-0.dll",
+    "sha256": "d4fbcccbe29371cbce431e43b2eb4f7ba9a6f04a3d740a071f02457a505e9dc8"
+  },
+  {
+    "file": "bin\\api-ms-win-crt-heap-l1-1-0.dll",
+    "sha256": "c71080cbcb43bf1f8f3e391deb12a582eb0abefc80946f340675a2c616e4feb4"
+  },
+  {
+    "file": "bin\\api-ms-win-crt-convert-l1-1-0.dll",
+    "sha256": "8b94662429171019fcd63c70bbf2095a075170599704a5e7dcdbe3da13f3a429"
+  },
+  {
+    "file": "bin\\api-ms-win-crt-string-l1-1-0.dll",
+    "sha256": "fcf12466cc12fd3b73611fc0763a5a1f9d44e90349513c34a0c83b0f36421793"
+  },
+  {
+    "file": "bin\\api-ms-win-crt-stdio-l1-1-0.dll",
+    "sha256": "900afc3989673c9bb1a687ed38c192f46db9e6ba6d11a668898a539e7fc23798"
+  },
+  {
+    "file": "bin\\api-ms-win-crt-runtime-l1-1-0.dll",
+    "sha256": "72adc1b3677e0814d9c4ebf0964000e84bb2acf67336c8963061665e44f78029"
+  },
+  {
+    "file": "bin\\vcruntime140_1.dll",
+    "sha256": "a7146c08f89fe5b04541ab507cdb59ff7b44534d4ba3c668a426c6450a03434e"
+  },
+  {
+    "file": "bin\\vcruntime140.dll",
+    "sha256": "d1f4225df2cd877dbf130d5668a021dce3f94118455ff5ec952061c30afc9ce7"
+  },
+  {
+    "file": "bin\\msvcp140.dll",
+    "sha256": "7c26614e1d733892c2deac7e245ce115504b1d80592dd0a01b08e3e5a55f89ca"
+  },
+  {
+    "file": "bin\\api-ms-win-crt-utility-l1-1-0.dll",
+    "sha256": "5f8f26b216ade615b67a41f6fbbb910972fc6153315a65bb8f09912be50215b1"
+  },
+  {
+    "file": "bin\\api-ms-win-crt-environment-l1-1-0.dll",
+    "sha256": "39e5929593709e8af3bc9e0a75ec1155778d6f4a247f4cdfc58928ad6db88434"
+  },
+  {
+    "file": "bin\\api-ms-win-crt-time-l1-1-0.dll",
+    "sha256": "886e57c4a6adb299b38f02945369f590a67da4e79a798359fc60aaa067212d7c"
+  },
+  {
+    "file": "bin\\api-ms-win-crt-filesystem-l1-1-0.dll",
+    "sha256": "5a8ecebac32edf4e1f3c5c6c1c8ea1a1add6cda4f9c9cb26f752fb295bea6865"
+  },
+  {
+    "file": "bin\\lcms2.dll",
+    "sha256": "9d97fbd455063b3d06d07d93ab84aab62c38746329574f75984b25b7b125a7c2"
+  },
+  {
+    "file": "bin\\poppler.dll",
+    "sha256": "8b56d53b847368f45690a0b2a03b4c9c5fd28da081a24105c523980ff2dcca70"
+  },
+  {
+    "file": "bin\\tiff.dll",
+    "sha256": "f566328ba0bd4b330c2de26cae37d5503ee67a48beea214a33f68f5c46ced49d"
+  },
+  {
+    "file": "bin\\zstd.dll",
+    "sha256": "9f94b5785da50b66219035f15b50430e2746e838065c8bad51093c5d9796edd8"
+  },
+  {
+    "file": "bin\\liblzma.dll",
+    "sha256": "c7a5ee5c0d7ef8afcbc869c05e63c0fece31ab991b04e9b2ff8e1d88e430f11b"
+  },
+  {
+    "file": "bin\\Lerc.dll",
+    "sha256": "d698362eea06344d7dea6e1145d9bde983c87f54c9ae8403dbd19ea5ac7ce5aa"
+  },
+  {
+    "file": "bin\\jpeg8.dll",
+    "sha256": "447b71896aba92066a8bdb4d6b25286d5f1d669d31c78248631d252c0ec0fe9f"
+  },
+  {
+    "file": "bin\\deflate.dll",
+    "sha256": "32357e9a96ca8bbb4f20a442984372c07416c24251c7a1470f61704275c0ad4d"
+  },
+  {
+    "file": "bin\\zlib.dll",
+    "sha256": "87827f5f5a4db8bf6cd276c0f0ddda093ad9ac3ed94f3e1e9759941fc9379baa"
+  },
+  {
+    "file": "bin\\libpng16.dll",
+    "sha256": "d25a77256d28c3137145077327d97ca04224cef0e3c9c1c946ddcce29b9e7ac1"
+  },
+  {
+    "file": "bin\\openjp2.dll",
+    "sha256": "1b90249887bf53dc7922d6bb06ccc3e54723fc5680efb44d9dab49328cd35a96"
+  },
+  {
+    "file": "bin\\libcurl.dll",
+    "sha256": "3103a328f568e166358f777bfcb2babf0946602db400f37bf67d437b22f207c2"
+  },
+  {
+    "file": "bin\\psl-5.dll",
+    "sha256": "f26220d46e30fd1f2ad814f7fe8bf1bbd1c2c7fe49c96f947a30a8244198de41"
+  },
+  {
+    "file": "bin\\icuuc78.dll",
+    "sha256": "5f4332359af5dc16af2f88c938b538f6a5710392cff00a1314e6c6f6a42ad283"
+  },
+  {
+    "file": "bin\\icudt78.dll",
+    "sha256": "22e982ceb0f90e9944724b93091d5b88558394dffb72741b6865c8344bd3807f"
+  },
+  {
+    "file": "bin\\libssh2.dll",
+    "sha256": "4a67a4c70d4dc348220cbbc2047905f3c68a968646cd31e3bad46de74c24e04c"
+  },
+  {
+    "file": "bin\\libcrypto-3-x64.dll",
+    "sha256": "b96d82a8cc933c6866468812db0912640b18ed9e0b0005e4c643b3b51444b966"
+  },
+  {
+    "file": "bin\\freetype.dll",
+    "sha256": "90fe6b5b1a326a238777ec928e81add94d428c011b1dfa2fff61b8a4f48a11dc"
+  }
+]

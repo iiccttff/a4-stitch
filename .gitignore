@@ -1,0 +1,15 @@
+/.venv/
+**/__pycache__/
+*.py[cod]
+/待处理试卷/
+/已处理/
+/output/
+/tools/wheels/
+/tools/test_samples/
+/tools/legacy_cache/
+/tools/poppler/bin/
+/tools/poppler/etc/
+/tools/poppler/share/
+/tools/poppler/download-source.json
+/tools/poppler-install-*/
+*.tmp
