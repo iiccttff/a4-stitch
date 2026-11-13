@@ -52,72 +52,96 @@ def verify_output(filename, read_numbers):
                 or abs(float(page.mediabox.height) - 297*72/25.4) > 0.01
                 or page.rotation != 0):
             raise ValueError('PDF纸张尺寸或方向不正确，未归档原文件。')
+    basis_match = re.search(r'页序依据[：:]\s*([^\n；;]+)', notes)
+    basis = basis_match[1].strip() if basis_match else ''
+    # 旧文件没有依据行时按页脚 OCR 来源处理，保留强制页脚复核。
+    footer_verified = basis.startswith('页脚')
+
     expected = [number for side in layout for number in side]
     document = pdfium.PdfDocument(str(path))
     previews, actual = [], [None] * len(expected)
     try:
-        for dpi, footer_start in ((300, 0.82), (200, 0.82), (300, 0.90), (200, 0.90)):
-            pictures, previews = [], []
-            for index, side in enumerate(layout):
-                page = document[index]
-                bitmap = page.render(scale=dpi/72)
-                try:
-                    image = bitmap.to_pil().convert('RGB')
-                finally:
-                    bitmap.close()
-                    page.close()
-                thumbnail = image.copy()
-                thumbnail.thumbnail((400, 500))
-                previews.append(thumbnail)
-                for position in range(len(side)):
-                    pictures.append(image.crop((round(position*image.width/len(side)), 0,
-                                                round((position+1)*image.width/len(side)), image.height)))
-            missing = [index for index, number in enumerate(actual) if number is None]
-            readings = read_numbers([pictures[index] for index in missing],
-                                    allow_book_numbers=True, footer_start=footer_start)
-            for index, reading in zip(missing, readings):
-                actual[index] = reading[0]
-            if actual == expected:
-                break
-            if any(number is not None and number != expected[index] for index, number in enumerate(actual)):
-                break
+        for index, side in enumerate(layout):
+            page = document[index]
+            bitmap = page.render(scale=200/72)
+            try:
+                image = bitmap.to_pil().convert('RGB')
+            finally:
+                bitmap.close()
+                page.close()
+            thumbnail = image.copy()
+            thumbnail.thumbnail((400, 500))
+            previews.append(thumbnail)
+        if footer_verified:
+            for dpi, footer_start in ((300, 0.82), (200, 0.82), (300, 0.90), (200, 0.90)):
+                pictures = []
+                for index, side in enumerate(layout):
+                    page = document[index]
+                    bitmap = page.render(scale=dpi/72)
+                    try:
+                        image = bitmap.to_pil().convert('RGB')
+                    finally:
+                        bitmap.close()
+                        page.close()
+                    for position in range(len(side)):
+                        pictures.append(image.crop((round(position*image.width/len(side)), 0,
+                                                    round((position+1)*image.width/len(side)), image.height)))
+                missing = [index for index, number in enumerate(actual) if number is None]
+                readings = read_numbers([pictures[index] for index in missing],
+                                        allow_book_numbers=True, footer_start=footer_start)
+                for index, reading in zip(missing, readings):
+                    actual[index] = reading[0]
+                if actual == expected:
+                    break
+                if any(number is not None and number != expected[index] for index, number in enumerate(actual)):
+                    break
     finally:
         document.close()
-    # 部分页脚在PDFium抗锯齿下会被OCR漏读；改用独立渲染器复核，不推测缺失页码。
-    poppler = find_poppler()
-    if actual != expected and poppler and all(number is None or number == expected[index]
-                                               for index, number in enumerate(actual)):
-        with tempfile.TemporaryDirectory(prefix='exam-pdf-check-') as folder:
-            for side_index, side in enumerate(layout):
-                offset = sum(len(previous) for previous in layout[:side_index])
-                if all(actual[offset+position] is not None for position in range(len(side))):
-                    continue
-                prefix = Path(folder) / f'page-{side_index}'
-                subprocess.run([poppler, '-r', '200', '-f', str(side_index+1), '-l', str(side_index+1),
-                                '-singlefile', '-png', str(path), str(prefix)],
-                               check=True, capture_output=True, timeout=60,
-                               creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-                with Image.open(prefix.with_suffix('.png')) as rendered:
-                    pictures = [rendered.crop((round(position*rendered.width/len(side)), 0,
-                                               round((position+1)*rendered.width/len(side)), rendered.height))
-                                for position in range(len(side))]
-                readings = read_numbers(pictures, allow_book_numbers=True)
-                for position, reading in enumerate(readings):
-                    if actual[offset+position] is None:
-                        actual[offset+position] = reading[0]
-    if actual != expected:
-        raise ValueError(f'{path.name} 输出页脚核验未通过：应为{expected}，识别为{actual}。原文件保留待处理。')
+
+    if footer_verified:
+        # 部分页脚在PDFium抗锯齿下会被OCR漏读；改用独立渲染器复核，不推测缺失页码。
+        poppler = find_poppler()
+        if actual != expected and poppler and all(number is None or number == expected[index]
+                                                   for index, number in enumerate(actual)):
+            with tempfile.TemporaryDirectory(prefix='exam-pdf-check-') as folder:
+                for side_index, side in enumerate(layout):
+                    offset = sum(len(previous) for previous in layout[:side_index])
+                    if all(actual[offset+position] is not None for position in range(len(side))):
+                        continue
+                    prefix = Path(folder) / f'page-{side_index}'
+                    subprocess.run([poppler, '-r', '200', '-f', str(side_index+1), '-l', str(side_index+1),
+                                    '-singlefile', '-png', str(path), str(prefix)],
+                                   check=True, capture_output=True, timeout=60,
+                                   creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+                    with Image.open(prefix.with_suffix('.png')) as rendered:
+                        pictures = [rendered.crop((round(position*rendered.width/len(side)), 0,
+                                                   round((position+1)*rendered.width/len(side)), rendered.height))
+                                    for position in range(len(side))]
+                    readings = read_numbers(pictures, allow_book_numbers=True)
+                    for position, reading in enumerate(readings):
+                        if actual[offset+position] is None:
+                            actual[offset+position] = reading[0]
+        if actual != expected:
+            raise ValueError(f'{path.name} 输出页脚核验未通过：应为{expected}，识别为{actual}。原文件保留待处理。')
+
     preview = Image.new('RGB', (420*len(previews), 540), '#dddddd')
     draw = ImageDraw.Draw(preview)
     for index, thumbnail in enumerate(previews):
         draw.text((index*420+10, 8), f'PDF {index+1}: {layout[index]}', fill='black')
         preview.paste(thumbnail, (index*420+10, 30))
     preview.save(path.with_name(path.stem + '_核验预览.png'))
-    path.with_name(path.stem + '_核验结果.txt').write_text(
-        f'自动核验通过\nPDF实际页脚顺序：{actual}\n纸张尺寸、方向及页数：通过\n'
-        '已从最终PDF渲染画面读取页码；核验预览可用于人工复查切缝和题目完整性。\n'
-        '自动检查不等于人工逐页视觉复查，也未进行打印机实物试印。\n', encoding='utf-8-sig')
-    print(f'输出核验通过：{path.name}，真实页码 {actual}')
+
+    if footer_verified:
+        result_text = (f'自动核验通过\nPDF实际页脚顺序：{actual}\n纸张尺寸、方向及页数：通过\n'
+                       '已从最终PDF渲染画面读取页码；核验预览可用于人工复查切缝和题目完整性。\n'
+                       '自动检查不等于人工逐页视觉复查，也未进行打印机实物试印。\n')
+    else:
+        result_text = (f'降级核验通过（未做页脚自动复核）\n页序依据：{basis}\n'
+                       '纸张尺寸、方向及页数：通过\n'
+                       '本套原图无清晰印刷页码，页序按上述依据确定；请人工逐页核对预览中的题目衔接与完整性后再打印。\n'
+                       '自动检查不等于人工逐页视觉复查，也未进行打印机实物试印。\n')
+    path.with_name(path.stem + '_核验结果.txt').write_text(result_text, encoding='utf-8-sig')
+    print(f'输出核验通过：{path.name}，页序 {expected}' + (f'，真实页码 {actual}' if footer_verified else ''))
 
 
 def archive_inputs(files, outputs, snapshot, root):

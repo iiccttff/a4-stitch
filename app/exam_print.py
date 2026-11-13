@@ -156,6 +156,76 @@ def split_two_pages(im):
     return left, right, cut
 
 
+# 无页脚页码时，用于按大题标题与小题号衔接推断阅读顺序的信号词
+BIG_TITLES = ('填一填', '选一选', '按要求做', '算一算', '解决问题', '口算',
+              '应用题', '填空题', '判断题', '选择题', '连线题', '作图题', '计算题')
+START_WORDS = ('测评卷', '测试卷', '考试', '满分', '得分', '姓名', '班级', '学号')
+END_WORDS = ('附加题', '附加')
+
+
+def _title_signals(text):
+    """从一页 OCR 全文提取大题标题、小题号、卷头/附加题标记。"""
+    compact = re.sub(r'\s+', '', unicodedata.normalize('NFKC', text or ''))
+    titles = [title for title in BIG_TITLES if title in compact]
+    is_start = any(word in compact for word in START_WORDS)
+    is_end = any(word in compact for word in END_WORDS)
+    smalls = [int(match[1]) for match in
+              re.finditer(r'(?:^|[^\d.>])(\d{1,2})\s*[.、·．](?=[一-龥])', compact)]
+    smalls = [number for number in smalls if 1 <= number <= 20]
+    return titles, smalls, is_start, is_end
+
+
+def infer_order_by_titles(texts):
+    """页脚读不到页码时，按大题标题和小题号衔接推断阅读顺序。
+
+    返回按阅读顺序排列的拆页下标列表；起点不唯一、衔接有歧义或信息不足时
+    返回 None，调用方应回退到文件名/拍摄顺序，不强行猜测。
+    """
+    count = len(texts)
+    if count == 1:
+        return [0]
+    signals = [_title_signals(text) for text in texts]
+    weak = sum(1 for titles, smalls, _, _ in signals if not smalls and not titles)
+    if weak > count // 2:
+        return None
+    starts = [index for index, (_, _, is_start, _) in enumerate(signals) if is_start]
+    if not starts:
+        starts = [index for index, (_, smalls, _, _) in enumerate(signals)
+                  if smalls and smalls[0] == 1]
+    if len(starts) != 1:
+        return None
+    chain = [starts[0]]
+    used = {starts[0]}
+    while len(chain) < count:
+        current = chain[-1]
+        current_titles, current_smalls, _, _ = signals[current]
+        candidates = []
+        for nxt in range(count):
+            if nxt in used:
+                continue
+            next_titles, next_smalls, _, _ = signals[nxt]
+            if not next_smalls and not next_titles:
+                continue
+            shared = bool(set(current_titles) & set(next_titles))
+            follows = False
+            if current_smalls and next_smalls and next_smalls[0] == current_smalls[-1] + 1:
+                follows = True  # 同大题续题（标题可能被 OCR 漏识别）
+            elif shared and current_smalls and next_smalls:
+                follows = next_smalls[0] == current_smalls[-1] + 1
+            elif next_smalls and next_smalls[0] == 1:
+                follows = True  # 新大题从小题 1 重新开始
+            if follows:
+                candidates.append(nxt)
+        if len(candidates) != 1:
+            return None
+        chain.append(candidates[0])
+        used.add(candidates[0])
+    ends = [index for index, (_, _, _, is_end) in enumerate(signals) if is_end]
+    if ends and chain[-1] not in ends:
+        return None
+    return chain
+
+
 def parse_page_footer(text, allow_book_numbers=False):
     compact = re.sub(r"\s+", "", unicodedata.normalize("NFKC", text))
     number = re.search(r"第(\d{1,3})[页頁]", compact)
@@ -292,21 +362,41 @@ def ask_page_order(pages, readings):
     return answer
 
 
-def order_by_page_number(pages, readings, manual=None):
+def order_by_page_number(pages, readings, manual=None, full_texts=None):
+    """返回 (排序后的页面, 与拆页原顺序对应的页码, 页序依据)。
+
+    页脚 OCR 齐全时依据页脚；读不到时先按大题标题/小题号衔接推断，
+    推断不成立再回退文件名/拍摄顺序。后两种均未经页脚自动复核。
+    """
     numbers = [reading[0] for reading in readings]
+    count = len(pages)
     if manual:
         numbers = [int(value.strip()) for value in manual.split(",")]
-        if len(numbers) != len(pages) or sorted(numbers) != list(range(1, len(pages)+1)):
+        if len(numbers) != count or sorted(numbers) != list(range(1, count + 1)):
             raise ValueError("--page-order 必须列出每个拆分页的实际页码，不重复不遗漏。")
+        basis = "手动指定页序"
     else:
         totals = {reading[1] for reading in readings if reading[1] is not None}
-        if any(total != len(pages) for total in totals):
-            raise ValueError(f"试卷标注共 {sorted(totals)} 页，但目前拆出 {len(pages)} 页。请检查缺页或混入其他试卷。")
-        if any(number is None for number in numbers) or sorted(numbers) != list(range(1, len(pages)+1)):
-            numbers = ask_page_order(pages, readings)
-    print(f"原始图片拆页的真实页码：{numbers}")
-    indexes = sorted(range(len(pages)), key=lambda i: numbers[i])
-    return [pages[i] for i in indexes], numbers
+        if any(total != count for total in totals):
+            raise ValueError(f"试卷标注共 {sorted(totals)} 页，但目前拆出 {count} 页。请检查缺页或混入其他试卷。")
+        ocr_ok = all(number is not None for number in numbers) \
+            and sorted(numbers) == list(range(1, count + 1))
+        if ocr_ok:
+            basis = "页脚 OCR"
+        else:
+            texts = full_texts if full_texts is not None else [reading[2] for reading in readings]
+            order = infer_order_by_titles(texts)
+            if order is not None:
+                numbers = [0] * count
+                for position, index in enumerate(order):
+                    numbers[index] = position + 1
+                basis = "题标号衔接推断"
+            else:
+                numbers = list(range(1, count + 1))
+                basis = "文件名/拍摄顺序"
+    print(f"原始图片拆页的真实页码：{numbers}（依据：{basis}）")
+    indexes = sorted(range(count), key=lambda i: numbers[i])
+    return [pages[i] for i in indexes], numbers, basis
 
 
 def make_a4_page(im, margin=MARGIN_DEFAULT):
@@ -427,8 +517,9 @@ def process_main(argv=None):
     from completed_inputs import snapshot_inputs, finish_inputs
     snapshot = snapshot_inputs(files)
     pages, readings, report = load_exam_pages(files, args.rotate)
+    full_texts = [record[2] for record in read_page_numbers(pages, footer_start=0.0)]
     try:
-        pages, source_numbers = order_by_page_number(pages, readings, args.page_order)
+        pages, source_numbers, basis = order_by_page_number(pages, readings, args.page_order, full_texts)
     except ValueError as exc:
         ap.error(str(exc))
 
@@ -471,9 +562,12 @@ def process_main(argv=None):
                     dpi=dpi, quality=95, subsampling=0)
     os.replace(temporary_pdf, pdf_path)
 
+    basis_note = f"页序依据：{basis}"
+    if basis != "页脚 OCR":
+        basis_note += "；未经页脚自动复核，请人工逐页核对预览后再打印。"
     notes = [f"纸张：{args.paper}", f"输入照片：{len(files)} 张；试卷内容：{n} 页",
              f"原照片左右拆页的真实页码：{source_numbers}", f"PDF 每面的实际页码：{layout}",
-             f"打印设置：{print_settings}"]
+             basis_note, f"打印设置：{print_settings}"]
     notes.extend(f"{fn}：方向={rot}，尺寸={size}，切缝={cut}" for fn, size, cut, rot in report)
     Path(pdf_path).with_name(Path(pdf_path).stem + '_打印说明.txt').write_text("\n".join(notes), encoding="utf-8-sig")
 

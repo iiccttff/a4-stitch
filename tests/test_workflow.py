@@ -86,4 +86,77 @@ class WorkflowTests(unittest.TestCase):
         self.assertTrue((latest/'old.pdf').exists())
         self.assertTrue(list((output/'失败记录').glob('*/bad.pdf')))
 
+def _clear_texts():
+    return [
+        "期中素养测评卷 满分：100分 得分： 一、填一填。 1.数一数 2.看图填一填 3.水果超市 4.在○里填",
+        "5.按规律填数 6.选三个数 7.小白兔 8.小朋友排队 二、选一选。 1.哪一组 2.谁走最短 3.卡片",
+        "4.小慧小洁 5.下面各题 三、按要求做一做。 1.圈不同类 2.接着画 3.画一画 四、算一算。 1.口算",
+        "2.看图列式 五、解决问题。 1.小杰 2.小萌 3.西瓜 4.操场 附加题。",
+    ]
+
+
+class OrderingTests(unittest.TestCase):
+    def test_title_inference_keeps_reading_order(self):
+        from exam_print import infer_order_by_titles
+        self.assertEqual(infer_order_by_titles(_clear_texts()), [0, 1, 2, 3])
+
+    def test_inference_returns_none_when_signals_weak(self):
+        from exam_print import infer_order_by_titles
+        self.assertIsNone(infer_order_by_titles(["空白页 "] * 4))
+
+    def test_order_basis_ocr_inference_and_filename(self):
+        from exam_print import order_by_page_number
+        from PIL import Image
+        pages = [Image.new('RGB', (100, 100)) for _ in range(4)]
+        ocr = [(1, 4, ''), (4, 4, ''), (2, 4, ''), (3, 4, '')]
+        _, numbers, basis = order_by_page_number(pages, ocr)
+        self.assertEqual(basis, '页脚 OCR')
+        self.assertEqual(numbers, [1, 4, 2, 3])
+
+        none_readings = [(None, None, '') for _ in range(4)]
+        _, numbers, basis = order_by_page_number(pages, none_readings, full_texts=_clear_texts())
+        self.assertEqual(basis, '题标号衔接推断')
+        self.assertEqual(numbers, [1, 2, 3, 4])
+
+        _, numbers, basis = order_by_page_number(pages, none_readings, full_texts=['空白'] * 4)
+        self.assertEqual(basis, '文件名/拍摄顺序')
+        self.assertEqual(numbers, [1, 2, 3, 4])
+
+
+class DegradedVerifyTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix='exam-degrade-tests-')
+        self.root = Path(self.temp.name)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def _make_pdf(self, path):
+        from pypdf import PdfWriter
+        writer = PdfWriter()
+        width = 210 * 72 / 25.4
+        height = 297 * 72 / 25.4
+        for _ in range(4):
+            writer.add_blank_page(width, height)
+        with open(path, 'wb') as handle:
+            writer.write(handle)
+
+    def test_degraded_verify_skips_footer_ocr(self):
+        pdf = self.root / 'exam.pdf'
+        self._make_pdf(pdf)
+        pdf.with_name(pdf.stem + '_打印说明.txt').write_text(
+            'PDF 每面的实际页码：[[1], [4], [2], [3]]\n页序依据：题标号衔接推断\n', encoding='utf-8-sig')
+        calls = []
+
+        def fake_read(images, **kwargs):
+            calls.append(images)
+            return [(1, None, '') for _ in images]
+
+        archive.verify_output(str(pdf), fake_read)
+        self.assertEqual(calls, [])
+        result = pdf.with_name(pdf.stem + '_核验结果.txt').read_text(encoding='utf-8-sig')
+        self.assertIn('降级核验通过', result)
+        self.assertTrue(pdf.with_name(pdf.stem + '_核验预览.png').is_file())
+
+
 if __name__=='__main__':unittest.main()
