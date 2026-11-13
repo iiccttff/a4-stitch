@@ -13,11 +13,25 @@ from PIL import Image, ImageDraw
 from pypdf import PdfReader
 import pypdfium2 as pdfium
 from project_paths import ROOT
+from desktop import find_poppler
 
 
 def snapshot_inputs(files):
     return {str(Path(filename).resolve()): hashlib.sha256(Path(filename).read_bytes()).hexdigest()
             for filename in files}
+
+
+def move_original(source, destination):
+    if os.name == 'nt':
+        os.rename(source,destination)
+    else:
+        # POSIX rename可能覆盖目标；同盘硬链接创建会在重名时原子失败。
+        os.link(source,destination)
+        try:
+            os.unlink(source)
+        except OSError:
+            os.unlink(destination)
+            raise
 
 
 def verify_output(filename, read_numbers):
@@ -70,8 +84,7 @@ def verify_output(filename, read_numbers):
     finally:
         document.close()
     # 部分页脚在PDFium抗锯齿下会被OCR漏读；改用独立渲染器复核，不推测缺失页码。
-    local_poppler = ROOT / 'tools' / 'poppler' / 'bin' / 'pdftoppm.exe'
-    poppler = str(local_poppler) if local_poppler.is_file() else None
+    poppler = find_poppler()
     if actual != expected and poppler and all(number is None or number == expected[index]
                                                for index, number in enumerate(actual)):
         with tempfile.TemporaryDirectory(prefix='exam-pdf-check-') as folder:
@@ -130,7 +143,7 @@ def archive_inputs(files, outputs, snapshot, root):
             while destination.exists():
                 destination = archive / f'{source.stem} ({number}){source.suffix}'
                 number += 1
-            os.rename(source, destination)  # Windows重名时拒绝覆盖；同盘移动不重新编码原文件。
+            move_original(source, destination)
             moved.append((source, destination))
         record = {'time': datetime.now().astimezone().isoformat(),
                   'inputs': [{'from': str(source), 'to': str(destination),
@@ -141,7 +154,7 @@ def archive_inputs(files, outputs, snapshot, root):
     except Exception:
         for source, destination in reversed(moved):
             if not source.exists():
-                os.rename(destination, source)
+                move_original(destination, source)
         raise
     print('已归档原文件：' + '、'.join(destination.name for _, destination in moved))
     return [destination for _, destination in moved]

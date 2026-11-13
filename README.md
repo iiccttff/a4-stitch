@@ -11,7 +11,7 @@ A4Stitch 面向使用 A4 双面打印机的家庭与教师。将一套四页试�
 ## 三步使用
 
 1. 将同一套试卷的照片或扫描 PDF 放入 **待处理试卷**。
-2. 双击 **处理试卷.bat**。
+2. Windows双击 **处理试卷.bat**，Mac双击 **处理试卷.command**。
 3. 在自动打开的 **output/最新结果** 中找到打印 PDF。
 
 **打印设置：A4、竖向、每张 1 页、双面长边翻转、适合可打印区域。**
@@ -27,7 +27,7 @@ PDF 已排好页序，打印软件中请使用普通单页打印设置。
 ## 功能
 
 - 从左右两页的照片中寻找空白分界并拆页，结合文字投影与页脚识别校正方向。
-- 使用 Windows 本地 OCR 识别真实页码，先排序，再生成 A4 拼接页序。
+- 使用 Windows 本地 OCR 或 macOS 原生 Vision 识别真实页码，先排序，再生成 A4 拼接页序。
 - 支持扫描 PDF；同一个 PDF 中的多套完整四页试卷分别输出。
 - 从内容识别年级、科目和标题，自动命名打印文件；不确定的字段不补写。
 - 从最终 PDF 渲染画面再次识别页脚，检查页数、尺寸和方向，生成核验预览与结果。
@@ -38,16 +38,19 @@ PDF 已排好页序，打印软件中请使用普通单页打印设置。
 
 ## 环境与安装
 
-目前面向 **Windows x64**，主要适配中文学校试卷。需要 **Python 3.10+**、Windows PowerShell 和可用的 Windows 中文 OCR 语言组件。
+支持 **Windows x64** 和 **macOS 13+（Apple Silicon / Intel）**，主要适配中文学校试卷，需要 **Python 3.11+**。Windows使用系统中文OCR，macOS使用系统Vision OCR。
 
 1. 下载或克隆源码，解压到本地目录。
-2. 双击 **安装依赖.bat**，自动建立工程内的 `.venv`。
-3. 双击 **检查环境.bat**，检查依赖、Windows OCR 和工程内 Poppler。
-4. 使用 **处理试卷.bat**。
+2. Windows双击 **安装依赖.bat**；Mac双击 **安装依赖.command**，自动建立工程内的 `.venv`。
+3. 运行本机的 **检查环境** 入口（Windows `.bat` / Mac `.command`）。
+4. 运行本机的 **处理试卷** 入口。
 
-Python 依赖固定在 `app/requirements.txt`。安装器优先使用 `tools/wheels` 中的离线安装包；缺包时需要联网。Poppler 缺失时会从上游 GitHub Windows 发行包恢复到 `tools/poppler`。
+macOS建议安装python.org提供的Python 3.11+（包含Tkinter）。安装器通过PyObjC调用Apple Vision，图片保留在本机；普通流程无需Homebrew。Poppler是可选复核工具，需要时可自行运行`brew install poppler`。
+如果下载后的`.command`无法执行，在工程目录的终端运行`chmod +x *.command`，再双击启动。
 
-本机已验证 Windows x64 / Python 3.14。源码仓库不包含虚拟环境、大型二进制或离线安装包；其他机器首次安装需要联网获取对应依赖。
+Python 依赖固定在 `app/requirements.txt`。安装器优先使用 `tools/wheels` 中的离线安装包；缺包时需要联网。Windows的Poppler缺失时从上游GitHub Windows发行包恢复到`tools/poppler`；macOS优先使用原生Vision和PDFium，Poppler可选。
+
+Windows已验证Python 3.14；macOS已在Apple Silicon / Python 3.14实机通过11项测试及四套16页真实样例。Intel Mac使用同一Vision后端，尚未做Intel实机验证。源码仓库不包含虚拟环境、大型二进制或离线安装包；其他机器首次安装需要联网获取对应依赖。
 
 ## 输入怎样命名
 
@@ -81,7 +84,7 @@ output/
 └─ 保留原名的原始照片和PDF
 ```
 
-双击 **打开最新结果.bat** 可再次打开本批文件夹。同名文件自动加序号；空运行或全部失败不会替换上次最新结果。
+运行本机的 **打开最新结果** 入口可再次打开本批文件夹。同名文件自动加序号；空运行或全部失败不会替换上次最新结果。
 
 ## 当前边界
 
@@ -101,12 +104,14 @@ output/
 .venv\Scripts\python.exe app\exam_print.py --help
 ```
 
+macOS对应命令使用`.venv/bin/python`。
+
 项目结构、命令行选项见 [开发说明](docs/开发说明.md)。本地回归测试覆盖归档重名保护、失败回滚、核验失败保留输入，以及最新/历史结果轮换。
-GitHub Actions 配置已提供；Windows OCR 和真实打印效果需要在本地检查，CI 不替代这两项。
+GitHub Actions 配置已提供；原生OCR端到端和真实打印效果需要本机检查，CI 不替代这两项。
 
 ## 开源依赖
 
-图像处理使用 Pillow，PDF 裁切与拼版使用 pypdf，分析渲染使用 pypdfium2，独立渲染复核使用 Poppler，OCR 使用 Windows 自带组件。
+图像处理使用 Pillow，PDF 裁切与拼版使用 pypdf，分析渲染使用 pypdfium2，独立渲染复核使用 Poppler，OCR使用Windows自带组件或macOS原生Vision。
 详见 [第三方说明](THIRD_PARTY_NOTICES.md)。
 
 ## 许可证与贡献

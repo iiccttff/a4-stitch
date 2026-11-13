@@ -4,7 +4,7 @@
 
 [中文](README.md)
 
-Designed primarily for Chinese four-page school exam papers on Windows. Output pages are ordered **1, 4, 2, 3**:
+Designed primarily for Chinese four-page school exam papers on Windows and macOS. Output pages are ordered **1, 4, 2, 3**:
 
 | A4 sheet | Front | Back |
 |---|---|---|
@@ -16,9 +16,11 @@ Print in A4 portrait, one PDF page per sheet side, duplex long-edge binding, fit
 
 ## Quick start
 
-Requires Windows x64, Python 3.10+, Windows PowerShell, and a working Chinese Windows OCR language component. Windows x64 / Python 3.14 has been tested locally.
+Requires Python 3.11+ and either Windows x64 with Chinese Windows OCR, or macOS 13+ with native Vision OCR (Apple Silicon or Intel). On macOS, use a Python installation with Tkinter; native Vision OCR and PDFium handle the standard workflow. Poppler via Homebrew is optional.
 
-1. Run `安装依赖.bat` to create the project-local virtual environment and install dependencies.
+Windows uses `.bat` launchers; macOS uses the corresponding `.command` files. If necessary, run `chmod +x *.command` once.
+
+1. Run `安装依赖.bat` (macOS: `安装依赖.command`) to create the project-local virtual environment and install dependencies.
 2. Run `检查环境.bat` to check Python dependencies, local Poppler, and Windows OCR.
 3. Put images or scanned PDFs in `待处理试卷`.
 4. Double-click `处理试卷.bat`.
@@ -28,7 +30,7 @@ A single set of photos needs no renaming. For multiple sets, use prefixes such a
 
 The tool identifies printed page numbers before imposing pages, infers output names from document content, verifies rendered PDF footers and dimensions, creates previews and a ZIP, and moves successful source files to `已处理`. Failed inputs remain pending. Previous output batches move to `output/历史结果`.
 
-Runtime processing is local and works offline after setup. Initial setup may download Python packages and the upstream Windows Poppler release; generated environments and binaries are not committed.
+Runtime processing is local and works offline after setup. Initial setup may download Python packages and the upstream Windows Poppler release, with optional Homebrew Poppler on macOS; generated environments and binaries are not committed.
 
 ## Limitations
 

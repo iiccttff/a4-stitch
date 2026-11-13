@@ -34,11 +34,11 @@ class WorkflowTests(unittest.TestCase):
         with self.assertRaises(ValueError):archive.archive_inputs(paths,[],snapshot,self.root)
         self.assertTrue(all(path.exists() for path in paths))
     def test_move_failure_restores_whole_group(self):
-        paths=self.inputs();snapshot=archive.snapshot_inputs(paths);rename=archive.os.rename
+        paths=self.inputs();snapshot=archive.snapshot_inputs(paths);rename=archive.move_original
         def move(source,destination):
             if source==paths[1]:raise PermissionError('locked')
             return rename(source,destination)
-        with patch.object(archive.os,'rename',side_effect=move):
+        with patch.object(archive,'move_original',side_effect=move):
             with self.assertRaises(PermissionError):archive.archive_inputs(paths,[],snapshot,self.root)
         self.assertTrue(all(path.exists() for path in paths))
     def test_failed_verification_keeps_sources(self):
@@ -50,6 +50,11 @@ class WorkflowTests(unittest.TestCase):
         source=self.root/'external.jpg';source.write_bytes(b'original')
         self.assertEqual(archive.archive_inputs([source],[],archive.snapshot_inputs([source]),self.root),[])
         self.assertTrue(source.exists())
+    def test_native_ocr_book_dash_variants(self):
+        from exam_print import parse_page_footer
+        for number,text in [(45,'-45-'),(46,'—46—'),(47,'ー47一'),(48,'ー48-'),(49,'−49−'),(50,'–50–')]:
+            self.assertEqual(parse_page_footer('一数上 SJ '+text,True)[0],number)
+        self.assertIsNone(parse_page_footer('题目中出现47',True)[0])
     def make_stage(self):
         stage=self.root/'output'/'.处理中_test';stage.mkdir(parents=True)
         (stage/'exam.pdf').write_bytes(b'fixture')

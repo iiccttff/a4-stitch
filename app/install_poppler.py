@@ -3,6 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
+import sys
 import tempfile
 import urllib.request
 import zipfile
@@ -10,10 +11,18 @@ from project_paths import ROOT
 
 
 def ensure_poppler():
+    if sys.platform == 'darwin':
+        from desktop import find_poppler
+        if find_poppler():
+            return
+        print('macOS使用原生Vision及PDFium；Poppler为可选补充，需安装时可运行 brew install poppler。')
+        return
+    if sys.platform != 'win32':
+        raise RuntimeError('目前支持Windows和macOS。')
     destination = ROOT/'tools'/'poppler'
     if (destination/'bin'/'pdftoppm.exe').is_file():
         return
-    headers = {'User-Agent':'exam-print-local-setup','Accept':'application/vnd.github+json'}
+    headers = {'User-Agent':'a4-stitch-local-setup','Accept':'application/vnd.github+json'}
     request = urllib.request.Request(
         'https://api.github.com/repos/oschwartz10612/poppler-windows/releases/latest',headers=headers)
     with urllib.request.urlopen(request,timeout=30) as response:
@@ -27,7 +36,7 @@ def ensure_poppler():
         if not folder.is_relative_to(tools.resolve()):
             raise RuntimeError('安装临时目录超出工程范围。')
         archive = folder/'package.zip'
-        with urllib.request.urlopen(urllib.request.Request(asset['browser_download_url'],headers={'User-Agent':'exam-print-local-setup'}),timeout=30) as response, archive.open('wb') as stream:
+        with urllib.request.urlopen(urllib.request.Request(asset['browser_download_url'],headers={'User-Agent':'a4-stitch-local-setup'}),timeout=30) as response, archive.open('wb') as stream:
             shutil.copyfileobj(response,stream)
         digest = asset.get('digest','') or ''
         if digest.startswith('sha256:') and hashlib.sha256(archive.read_bytes()).hexdigest()!=digest[7:]:

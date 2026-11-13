@@ -24,6 +24,7 @@ from pathlib import Path
 
 from PIL import Image, ImageOps
 from project_paths import ROOT
+from desktop import open_path
 
 # ---------------- 定型常量 ----------------
 A4_W, A4_H = 2480, 3508          # A4 竖版像素 @300dpi
@@ -155,8 +156,22 @@ def split_two_pages(im):
     return left, right, cut
 
 
+def parse_page_footer(text, allow_book_numbers=False):
+    compact = re.sub(r"\s+", "", unicodedata.normalize("NFKC", text))
+    number = re.search(r"第(\d{1,3})[页頁]", compact)
+    total = re.search(r"共(\d{1,3})[页頁]", compact)
+    if number is None and total:
+        number = re.search(r"(\d{1,3})[页頁][(（]共\d", compact)
+        if number is None:
+            number = re.search(r"第(\d{1,3})[(（]共\d", compact)
+    if number is None and allow_book_numbers:
+        number = re.search(r"[-—一－ー−–](\d{1,3})[-—一－ー−–][。．.]*$", compact)
+    return (int(number[1]) if number else None,
+            int(total[1]) if total else None, text)
+
+
 def read_page_numbers(pages, allow_book_numbers=False, footer_start=0.82):
-    """用本机 Windows OCR 读取页脚；不上传图片，不凭文件名猜页码。"""
+    """用本机 Windows OCR 或 macOS Vision 读取页脚；不上传图片，不凭文件名猜页码。"""
     helper = Path(__file__).with_name("read_page_numbers.ps1")
     with tempfile.TemporaryDirectory(prefix="exam-pages-") as tmp:
         paths = []
@@ -170,13 +185,19 @@ def read_page_numbers(pages, allow_book_numbers=False, footer_start=0.82):
         manifest = Path(tmp) / "input.json"
         manifest.write_text(json.dumps(paths), encoding="utf-8")
         try:
+            if sys.platform == 'darwin':
+                command = [sys.executable, str(Path(__file__).with_name('mac_ocr.py')), str(manifest)]
+            elif sys.platform == 'win32':
+                command = ["powershell.exe", "-NoProfile", "-NonInteractive", "-File", str(helper),
+                           "-Manifest", str(manifest)]
+            else:
+                raise RuntimeError('目前仅支持Windows和macOS。')
             result = subprocess.run(
-                ["powershell.exe", "-NoProfile", "-NonInteractive", "-File", str(helper),
-                 "-Manifest", str(manifest)], capture_output=True, encoding="utf-8",
+                command, capture_output=True, encoding="utf-8",
                 timeout=90, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
             if result.returncode:
-                raise RuntimeError(result.stderr.strip() or "Windows OCR 未启动")
+                raise RuntimeError(result.stderr.strip() or "本地 OCR 未启动")
             records = json.loads(result.stdout.lstrip("\ufeff"))
             texts = {record["path"]: record["text"] for record in records}
         except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as exc:
@@ -185,17 +206,7 @@ def read_page_numbers(pages, allow_book_numbers=False, footer_start=0.82):
         readings = []
         for path in paths:
             text = texts.get(path, "")
-            compact = re.sub(r"\s+", "", unicodedata.normalize("NFKC", text))
-            number = re.search(r"第(\d{1,3})[页頁]", compact)
-            total = re.search(r"共(\d{1,3})[页頁]", compact)
-            if number is None and total:
-                number = re.search(r"(\d{1,3})[页頁][(（]共\d", compact)
-                if number is None:
-                    number = re.search(r"第(\d{1,3})[(（]共\d", compact)
-            if number is None and allow_book_numbers:
-                number = re.search(r"[-—一－](\d{1,3})[-—一－][。．.]*$", compact)
-            readings.append((int(number[1]) if number else None,
-                             int(total[1]) if total else None, text))
+            readings.append(parse_page_footer(text, allow_book_numbers))
         return readings
 
 
@@ -358,7 +369,7 @@ def process_main(argv=None):
             raise SystemExit(1)
         if args.open:
             os.makedirs(args.out or str((ROOT / 'output')), exist_ok=True)
-            os.startfile(args.out or str((ROOT / 'output')))
+            open_path(args.out or str((ROOT / 'output')))
         return
 
     # 有 a1/a2、b1/b2 这类名称时按字母前缀分套；每个PDF作为独立来源。
@@ -406,7 +417,7 @@ def process_main(argv=None):
         print(f'全部处理完成，结果保存在：{outdir}')
         if args.open:
             try:
-                os.startfile(outdir)
+                open_path(outdir)
             except OSError:
                 pass
         return
@@ -484,7 +495,7 @@ def process_main(argv=None):
                   ROOT, args.keep_inputs)
     if args.open:
         try:
-            os.startfile(pdf_path)
+            open_path(pdf_path)
         except OSError as exc:
             print(f"PDF 已生成，但自动打开失败：{exc}")
 

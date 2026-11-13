@@ -8,6 +8,7 @@ A4Stitch的MIT许可证适用于本仓库原创代码与文档。第三方组件
 | pypdf | PDF裁切、缩放和重排 | https://github.com/py-pdf/pypdf ，BSD-3-Clause |
 | pypdfium2 / PDFium | PDF分析和渲染 | https://github.com/pypdfium2-team/pypdfium2 ，包装器及PDFium/依赖各有相应许可证，见发行包 |
 | Poppler | 独立渲染复核 | https://poppler.freedesktop.org/ ，GPL-2.0-or-later及各依赖许可证 |
+| PyObjC / Vision | macOS原生离线OCR | https://github.com/ronaldoussoren/pyobjc ，PyObjC为MIT；Vision是macOS系统组件 |
 | Windows OCR | 本机页码和标题识别 | Windows系统组件，不随本仓库重新分发 |
 
 Windows Poppler发行包上游：https://github.com/oschwartz10612/poppler-windows 。该仓库的打包脚本许可证与Poppler二进制本身的许可证应分别查看。

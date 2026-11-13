@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 import uuid
 import zipfile
+from desktop import open_path, chinese_font
 
 
 def _move_inside(source, destination, output_root):
@@ -35,8 +36,8 @@ def _update_archive_log(root, mappings):
 def package_results(stage, passed):
     from PIL import Image, ImageDraw, ImageFont, ImageOps
     import pypdfium2 as pdfium
-    font_path = Path(os.environ.get('WINDIR',r'C:\Windows'))/'Fonts'/'msyh.ttc'
-    font = ImageFont.truetype(str(font_path),22) if font_path.exists() else ImageFont.load_default()
+    font_path = chinese_font()
+    font = ImageFont.truetype(str(font_path),22) if font_path is not None else ImageFont.load_default()
     board = Image.new('RGB',(1280,60+520*len(passed)),'#e9e9e6')
     draw = ImageDraw.Draw(board)
     draw.text((12,10),'本次试卷拼接预览（打印请使用PDF）',font=font,fill='black')
@@ -153,7 +154,7 @@ def run_default_batch(process, argv, root):
             destination = latest or output_root/'最新结果'
             if destination.exists():
                 try:
-                    os.startfile(destination)
+                    open_path(destination)
                 except OSError:
                     pass
     return result

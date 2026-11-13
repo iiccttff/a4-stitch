@@ -5,9 +5,9 @@
 - 展示名称：**A4Stitch · A4 拼卷**
 - 推荐仓库名：**a4-stitch**
 - 中文介绍：把试卷整理成A4双面打印文件，拼出A3展开效果。
-- 英文Description：Local Windows tool for turning exam photos and scanned PDFs into A4 duplex printouts that join into an A3 spread.
+- 英文Description：Local Windows/macOS tool for turning exam photos and scanned PDFs into A4 duplex printouts that join into an A3 spread.
 - 建议Topics：`pdf` `printing` `duplex-printing` `a4` `a3` `ocr` `exam-paper` `windows` `python`
-- 初始版本：0.1.0
+- 初始版本：0.2.0
 - 原创代码许可证：MIT；第三方依赖见THIRD_PARTY_NOTICES.md。
 
 ## 创建与推送
@@ -33,7 +33,7 @@ git push
 
 1. 在GitHub查看README示意图与链接。
 2. 查看Actions结果；当前CI不覆盖中文OCR及实物打印。
-3. Release可使用标签v0.1.0，标题“A4Stitch 0.1.0”。
+3. Release可使用标签v0.2.0，标题“A4Stitch 0.2.0”。
 4. 发布源码包时可直接使用GitHub自动生成的Source code附件。
 5. 若另做包含Python或Poppler等二进制的便携包，需额外整理对应许可证和来源；当前提供的是可安装的源码工程。
 
@@ -43,5 +43,5 @@ A4Stitch首个版本：把试卷照片和扫描PDF整理为A4双面打印文件�
 
 默认页序1、4、2、3。支持页码识别、自动命名、输出核验、拼接预览、结果打包、原文件归档与历史批次保存。
 
-需要Windows x64、Python 3.10+及Windows中文OCR组件。安装依赖后可本地离线处理。
+支持Windows x64和macOS13+，需要Python3.11+；分别使用Windows中文OCR和macOS原生Vision。安装依赖后可本地离线处理。
 当前主要针对四页中文试卷；明显透视、弯曲和PDF旋转标记尚未完整自动校正。自动核验后仍需查看题目边缘和清晰度。

@@ -26,3 +26,5 @@
 - 除非用户另行指定，不再次询问默认A4/A3选择，不擅自改为A3整张、骑马钉或其他拼版。
 
 完整步骤、能力边界和已验证样例见 `docs/标准处理流程.md`。
+
+- 本地目录统一为D:\Tools\a4-stitch。支持Windows与macOS入口，Mac使用原生Vision与PDFium，Homebrew Poppler为可选；维护两平台测试。
